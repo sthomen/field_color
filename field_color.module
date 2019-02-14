@@ -1,0 +1,223 @@
+<?php
+
+/**
+ * Implements hook_field_info()
+ */
+function field_color_field_info() {
+	return array(
+		'field_color' => array(
+			'label' => t('Color'),
+			'description' => t('This field stores hex colors in the database.'),
+			'default_widget' => 'field_color_hex_widget',
+			'default_formatter' => 'field_color_formatter_css'
+		)
+	);
+}
+
+/**
+ * Implements hook_field_validate()
+ */
+
+function field_color_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+	foreach ($items as $delta => $item) {
+		if ($item['value'] != '') {
+			if (!is_string($item['value']) || !preg_match('/[0-9a-f]/i', $item['value'])) {
+				$errors[$field['field_name']][$langcode][$delta][] = array(
+					'error' => 'Invalid color value',
+					'message' => t('%name: Invalid color value', array('%name' => $instance['label']))
+				);
+			}
+		}
+	}
+}
+
+/**
+ * Implements hook_field_is_empty().
+ */
+function field_color_field_is_empty($item, $field) {
+	if (empty($item['value'])) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/*************************************************************************
+ * CSS Formatter
+ ************************************************************************/
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function field_color_field_formatter_info() {
+	return array(
+		'field_color_formatter_css' => array(
+			'label' => t('Set value in CSS'),
+			'field types' => array('field_color'),
+			'settings' => array(
+				'selector' => 'body',
+				'attribute' => 'color',
+				'force' => FALSE
+			)
+		)
+	);
+}
+
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function field_color_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+	$display = $instance['display'][$view_mode];
+	$settings = $display['settings'];
+
+	$attributes = array(
+		'background' => t('Background color'),
+		'color' => t('Text color')
+	);
+
+	return array(
+		'selector'  => array(
+			'#type' => 'textfield',
+			'#title' => _field_color_setting_label('selector'),
+			'#required' => TRUE,
+			'#default_value' => $settings['selector'],
+			'#description' => t('The CSS selectors for this field, you may use tokens here.') . '<br />' . theme('webform_token_help')
+		),
+		'attribute' => array(
+			'#type' => 'select',
+			'#title' => _field_color_setting_label('attribute'),
+			'#options' => $attributes,
+			'#default_value' => $settings['attribute']
+		),
+		'force' => array(
+			'#type' => 'checkbox',
+			'#title' => _field_color_setting_label('force'),
+			'#default_value' => $settings['force']
+		)
+	);
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function field_color_field_formatter_settings_summary($field, $instance, $view_mode) {
+	$display = $instance['display'][$view_mode];
+	$settings = $display['settings'];
+
+	$summary = array();
+
+	foreach ($settings as $key => $value) {
+		$summary[]=t('@name: %value', array('@name' => _field_color_setting_label($key), '%value' => $value));
+	}
+
+	return implode('<br />', $summary);
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function field_color_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+	$settings = $display['settings'];
+
+	// no values, skip
+	if (count($items) < 1)
+		return;
+
+	// formatting variables
+	$selector = token_replace($settings['selector'], array('node' => $entity));
+	$attribute = $settings['attribute'];
+	$force = $setings['force'] ? ' !important' : '';
+
+	// Multiple values make no sense, but let's handle them anyway
+	$css=array();
+
+	foreach ($items as $delta => $item) {
+		$css[] = sprintf("%s { %s: #%s%s; }", $selector, $attribute, $item['value'], $force);
+	}
+
+	backdrop_add_css(implode("\n", $css), array('type' => 'inline'));
+}
+
+/*************************************************************************
+ * Widgets
+ ************************************************************************/
+
+/**
+ * Implements hook_library().
+ */
+function field_color_library_info() {
+	$path = backdrop_get_path('module', 'field_color');
+	return array(
+		'picker' => array(
+			'title' => t('Color picker library'),
+			'version' => '1.0',
+			'js' => array($path . '/js/picker.js' => array()),
+			'css' => array($path . '/css/picker.css' => array())
+		)
+	);
+}
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function field_color_field_widget_info() {
+	return array(
+		'field_color_hex_widget' => array(
+			'label' => t('Enter hex value'),
+			'field types' => array('field_color')
+		),
+		'field_color_js_widget' => array(
+			'label' => t('Pick color from a simple JS widget'),
+			'field types' => array('field_color')
+		)
+	);
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function field_color_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+	$value = isset($items[$delta]['value']) ? $items[$delta]['value'] : '';
+	$widget = $instance['widget'];
+
+	$element += array(
+		'#type' => 'textfield',
+		'#size' => 6,
+		'#maxlength' => 6,
+		'#default_value' => $value,
+	);
+
+	if ($widget['type'] == 'field_color_js_widget') {
+		$element['#attributes'] = array('class' => array('field-color-picker'));
+		backdrop_add_library('field_color', 'picker');
+	} else {
+		$element['#field_prefix'] = '#';
+	}
+
+	return array('value' => $element);
+}
+
+/**
+ * Implements hook_field_widget_error().
+ */
+function field_color_field_widget_error($element, $error, $form, &$form_state) {
+  form_error($element['value'], $error['message']);
+}
+
+/*************************************************************************
+ * Utility
+ ************************************************************************/
+
+function _field_color_setting_label($setting) {
+	$labels = array(
+		'selector' => t('Selector'),
+		'attribute' => t('Attribute to set'),
+		'force' => t('Add !important')
+	);
+
+	if (in_array($labels, $setting)) {
+		return $labels[$setting];
+	}
+	
+	return $setting;
+}

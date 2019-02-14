@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * Implements hook_field-schema()
+ */
+function field_color_field_schema($field) {
+	return array(
+		'columns' => array(
+			'value' => array(
+				'type' => 'varchar',
+				'length' => 6,
+				'not null' => FALSE
+			)
+		)
+	);
+}

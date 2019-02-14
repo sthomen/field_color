@@ -1,0 +1,4 @@
+name = Field Color
+description = Record a color in a field, with a javascript selector
+backdrop = 1.x
+version = 1.0
