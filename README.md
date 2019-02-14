@@ -5,7 +5,7 @@ Included are two basic widgets and one formatter for CSS.
 
 ## Formatters
 
-### Formatter: Set value in CSS
+### Set value in CSS
 
 This formatter lets you define a selector expression (that can use tokens),
 if it should set the background or foreground color and wheter or not to add
