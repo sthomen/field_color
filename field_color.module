@@ -71,7 +71,7 @@ function field_color_field_formatter_settings_form($field, $instance, $view_mode
 	$settings = $display['settings'];
 
 	$attributes = array(
-		'background' => t('Background color'),
+		'background-color' => t('Background color'),
 		'color' => t('Text color')
 	);
 
